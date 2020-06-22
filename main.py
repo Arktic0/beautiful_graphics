@@ -11,6 +11,7 @@ lcdate = datetime.strptime(ldate, '%Y-%m-%d').date()
 
 fuserid = str(input('1 id:'))
 suserid = str(input('2 id:'))
+users = [fuserid, suserid]
 
 with open(filename, 'r') as file:
     for ln in file:
@@ -21,11 +22,13 @@ with open(filename, 'r') as file:
             ctime = datetime.strptime(ln[1], '%Y-%m-%d %H:%M:%S.%f%z')
         except ValueError:
             ctime = datetime.strptime(ln[1], '%Y-%m-%d %H:%M:%S%z')
-        if ln[0] == fuserid:
-            if fcdate <= ctime.date() <= lcdate:
-                cdict[ln[0]].append(ln[1])
-        if ln[0] == suserid:
-            if fcdate <= ctime.date() <= lcdate:
-                cdict[ln[0]].append(ln[1])
+        if ln[4] in users and fcdate <= ctime.date() <= lcdate:
+            row = {
+                "userId": ln[4],
+                "state": ln[2],
+                "ctime": ctime
+            }
+            cdict[row["userId"]].append(row)
 
-print(cdict)
+print(len(cdict[fuserid]))
+print(len(cdict[suserid]))
