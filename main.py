@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -22,7 +22,7 @@ def parse_time(s):
 
 
 def time_group(dt):
-    return dt.strftime('%Y-%m-%d')
+    return dt.strftime('%Y-%m-%d %H')
 
 
 data = {}
@@ -33,27 +33,35 @@ with open(filename, 'r') as file:
         user_id = ln[4]
         state = ln[2]
         if user_id in users and fcdate <= ctime.date() <= lcdate:
-            state_range = 0
-            if len(ln) > 5:
+            state_range = None
+            if len(ln) > 6:
                 state_range = parse_time(ln[6]) - parse_time(ln[5])
             z = data.setdefault(user_id, {})
             z = z.setdefault(time_group(ctime), {})
-            z = z.setdefault(state, [])
-            z.append({"ctime": ctime, "crange": state_range})
+            z.setdefault(state, 0)
+            if state_range:
+                z[state] += state_range.seconds
 
-#states = data[fuserid]['2020-05-22']
-#for s in states.items():
-#    print(s)
-#raz = lcdate - fcdate
-#print(raz.days)
-sr = state_range.seconds / 3600
-x = np.arange(fcdate, lcdate)
-y = np.float(sr)
-print(state_range)
-fig, ax = plt.subplots()
-ax.bar(x, y)
-ax.set_facecolor('white')
-fig.set_figwidth(12)    #  ширина Figure
-fig.set_figheight(6)    #  высота Figure
-fig.set_facecolor('white')
+
+xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
+subsampled_xticks = map(lambda t: t.strftime("%m-%d"), xticks[0::24])
+xvals = np.arange(len(xticks))
+plt.xticks(xvals[0::24], subsampled_xticks)
+
+plt.ylabel("Минуты")
+plt.yticks(np.arange(0, 70, 10))
+
+fuser_busy_values = [
+    data[fuserid].get(time_group(time), {}).get('Busy', 0) / 60
+    for time in xticks
+]
+fuser_ready_values = [
+    data[fuserid].get(time_group(time), {}).get('Ready', 0) / 60
+    for time in xticks
+]
+
+busy = plt.bar(xvals, fuser_busy_values, 0.9)
+ready = plt.bar(xvals, fuser_ready_values, 0.9, bottom=fuser_busy_values)
+plt.legend((busy[0], ready[0]), ('Занят', 'Готов'))
+
 plt.show()
