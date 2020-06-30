@@ -1,5 +1,6 @@
 from datetime import datetime
-from collections import defaultdict
+import numpy as np
+import matplotlib.pyplot as plt
 
 filename = str(input("путь:"))
 fdate = str(input("начальная дата:"))
@@ -12,7 +13,6 @@ fuserid = str(input('1 id:'))
 suserid = str(input('2 id:'))
 users = [fuserid, suserid]
 
-
 def parse_time(s):
     s = s.strip(' \n') + "00"
     try:
@@ -22,7 +22,7 @@ def parse_time(s):
 
 
 def time_group(dt):
-    return dt.strftime('%Y-%m-%d %H')
+    return dt.strftime('%Y-%m-%d')
 
 
 data = {}
@@ -35,15 +35,32 @@ with open(filename, 'r') as file:
         state = ln[2]
         state_range = None
         if len(ln) > 5:
-            state_range = ln[5] # TODO: parse time range
-
+            ln[5] = ln[5].strip('\n["')
+            ln[5] += "00"
+            ln[6] = ln[6].strip('\n)"')
+            ln[6] += "00"
+            ln[5] = datetime.strptime(ln[5], '%Y-%m-%d %H:%M:%S.%f%z')
+            ln[6] = datetime.strptime(ln[6], '%Y-%m-%d %H:%M:%S.%f%z')
+            state_range = ln[6] - ln[5]
         if user_id in users and fcdate <= ctime.date() <= lcdate:
             z = data.setdefault(user_id, {})
             z = z.setdefault(time_group(ctime), {})
             z = z.setdefault(state, [])
-            z.append({"ctime": ctime, "range": state_range})
+            z.append({"ctime": ctime, "crange": state_range})
 
-
-states = data[fuserid]['2017-03-13 17']
-for s in states.items():
-    print(s)
+#states = data[fuserid]['2020-05-22']
+#for s in states.items():
+#    print(s)
+#raz = lcdate - fcdate
+#print(raz.days)
+sr = state_range.seconds / 3600
+x = np.arange(fcdate, lcdate)
+y = np.float(sr)
+print(state_range)
+fig, ax = plt.subplots()
+ax.bar(x, y)
+ax.set_facecolor('white')
+fig.set_figwidth(12)    #  ширина Figure
+fig.set_figheight(6)    #  высота Figure
+fig.set_facecolor('white')
+plt.show()
