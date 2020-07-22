@@ -43,80 +43,130 @@ with open(filename, 'r') as file:
             if state_range:
                 z[state] += state_range.seconds
 
-rneeddate = {}
-rneed = []
-rneedstate = {}
-i = 0
-pp = 0
-while pp != 2:
-    pp += 1
-    for key, value in data[fuserid].items():
-        for smt, need in value.items():
-            if need > 3600:
-                rneedstate[smt] = 3600
-                rneed.append(need)
-                key = datetime.strptime(key, '%Y-%m-%d %H')
-                rneeddate[key] = key
-                while need > 3600:
-                    need -= 3600
+#
+l = 0
+fs = []
+kucha = {}
+allraz = {}
+print('data1:', data[fuserid])
 
-    for l in rneeddate:
-        groups = np.arange(rneeddate[l], lcdate, timedelta(hours=1)).astype(datetime)
-        try:
-            while rneed[i] > 3600:
-                rneed[i] -= 3600
-                grp_key = time_group(groups[i])
-                data[fuserid][grp_key] = rneedstate
-                this_group = data[fuserid][grp_key]
-                i += 1
-        except IndexError:
+# Overflow
+for key, value in data[fuserid].items():
+    lneed = []
+    while l == 0:
+        rkey = datetime.strptime(key, '%Y-%m-%d %H')
+        l += 1
+    for smt, need in value.items():
+        if need < 3600:
+            lneed.append(need)
+        if sum(lneed) > 3600:
+            lneed.sort()
+            data[fuserid][key].update({smt: need + 3600 - sum(lneed)})
+            allraz[key] = {smt: sum(lneed) - 3600}
+        if need > 3600:
+            if len(lneed) != 0:
+                allraz[key] = {smt: need - (3600 - sum(lneed))}
+                data[fuserid][key].update({smt: 3600 - sum(lneed)})
+            else:
+                allraz[key] = {smt: need - 3600}
+                data[fuserid][key].update({smt: 3600})
+
+for key, value in data[fuserid].items():
+    for smt, need in value.items():
+        fs.append(need)
+
+    kucha[key] = sum(fs)
+    fs.clear()
+
+print('data2:', data[fuserid])
+print('raz:', allraz)
+print('kucha:', kucha)
+
+'''groups = np.arange(rkey, lcdate, timedelta(hours=1)).astype(datetime)
+j = 0
+
+for k in groups:
+    grp_key = time_group(groups[j])
+    j += 1
+    for raz_key, raz_value in allraz.items():
+        for raz_state, raz_time in raz_value.items():
+
+            h = 0
+            print(grp_key)
+            try:
+                if (kucha[grp_key]) < 3600:
+                    print('!')
+                    print(data[fuserid][grp_key][smt])
+                    if raz_time <= 3600 - data[fuserid][grp_key][smt]:
+                        data[fuserid][grp_key].update({raz_state: data[fuserid][grp_key][smt] + raz_time})
+                    else:
+                        data[fuserid][grp_key].update({raz_state: 3600})
+                        allraz[raz_key].update({raz_state: raz_time + data[fuserid][grp_key][raz_state] - 3600})
+            except KeyError:
+                break
+
+        else:
             continue
+            print('!!')
+            j = 0
+            for k in groups:
+                grp_key = time_group(groups[j])
+                if grp_key in data[fuserid]:
+                    j += 1
+                    continue
+                if h == 1:
+                    break
+                data[fuserid].update({grp_key: {raz_state: raz_time}})
+                h += 1
 
+    print(grp_key)
+    print(allraz)
+    print(data[fuserid])'''
+
+# Test bar chart
 xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
 subsampled_xticks = map(lambda t: t.strftime("%m-%d"), xticks[0::24])
 xvals = np.arange(len(xticks))
 plt.xticks(xvals[0::24], subsampled_xticks)
-
-plt.ylabel("Минуты")
 plt.yticks(np.arange(0, 70, 10))
 
-fuser_busy_values = [
-    data[fuserid].get(time_group(time), {}).get('Busy', 0) / 60
-    for time in xticks
-]
-fuser_ready_values = [
-    data[fuserid].get(time_group(time), {}).get('Ready', 0) / 60
-    for time in xticks
-]
-fuser_rest_values = [
-    data[fuserid].get(time_group(time), {}).get('Rest', 0) / 60
-    for time in xticks
-]
-fuser_loggedout_values = [
-    data[fuserid].get(time_group(time), {}).get('LoggedOut', 0) / 60
-    for time in xticks
-]
-fuser_na_values = [
-    data[fuserid].get(time_group(time), {}).get('NA', 0) / 60
-    for time in xticks
-]
-fuser_servicebreak_values = [
-    data[fuserid].get(time_group(time), {}).get('ServiceBreak', 0) / 60
-    for time in xticks
-]
-fuser_dinner_values = [
-    data[fuserid].get(time_group(time), {}).get('Dinner', 0) / 60
-    for time in xticks
-]
+# Legend
+bars = [('Busy', 'Занят'), ('Ready', 'Готов'), ('Rest', 'Отдых'),
+        ('LoggedOut', 'Вышел'), ('Dinner', 'Обед'),
+        ('ServiceBreak', 'Тех. перерыв'), ('NA', '-')]
 
-busy = plt.bar(xvals, fuser_busy_values, 0.9)
-ready = plt.bar(xvals, fuser_ready_values, 0.9, bottom=fuser_busy_values)
-rest = plt.bar(xvals, fuser_rest_values, 0.9, bottom=fuser_ready_values)
-loggedout = plt.bar(xvals, fuser_loggedout_values, 0.9, bottom=fuser_rest_values)
-dinner = plt.bar(xvals, fuser_dinner_values, 0.9, bottom=fuser_loggedout_values)
-servicebreak = plt.bar(xvals, fuser_servicebreak_values, 0.9, bottom=fuser_dinner_values)
-na = plt.bar(xvals, fuser_na_values, 0.9, bottom=fuser_servicebreak_values)
-plt.legend((busy[0], ready[0], rest[0], loggedout[0], dinner[0], servicebreak[0], na[0]),
-           ('Занят', 'Готов', 'Отдых', 'Вышел', 'Обед', 'тех.перерыв', '-'))
+legend_bars = []
+prev_values = None
 
+for (state, label) in bars:
+    values = [
+        data[fuserid].get(time_group(time), {}).get(state, 0) / 60
+        for time in xticks
+    ]
+    bar = plt.bar(xvals, values, 0.8, bottom=prev_values)
+    print(bar)
+    legend_bars.append(bar[0])
+    prev_values = values
+
+plt.legend(legend_bars, map(lambda x: x[1], bars))
+
+print(legend_bars)
+print(values)
+
+# Multiple bar charts
+fig, (ax1, ax2) = plt.subplots(2)
+
+ax1.bar(xticks, values, 0.35)
+ax1.set_yticks(np.arange(0, 61, 10))
+ax1.set_title('fuser')
+ax1.set_ylabel('Минуты')
+
+ax2.bar(xticks, values, 0.35)
+ax2.set_yticks(np.arange(0, 61, 10))
+ax2.set_title('fuser2')
+ax2.set_ylabel('Минуты')
+
+fig.legend(legend_bars, map(lambda x: x[1], bars))
+
+# Graphs
 plt.show()
