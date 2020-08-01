@@ -2,6 +2,9 @@
 from datetime import datetime, timedelta
 import numpy as np
 import matplotlib.pyplot as plt
+from console_progressbar import ProgressBar
+#from progress.bar import IncrementalBar
+#import pdb, time, sys
 
 # Input
 filename = str(input("Path:"))
@@ -57,23 +60,22 @@ def distribute_overflows(du):
     rkey = datetime.strptime(key, '%Y-%m-%d %H')
     groups = np.arange(rkey, lcdate, timedelta(hours=1)).astype(datetime)
     j = 0
-    b = 0
 
     for k in groups:
         grp_key = group_time(groups[j])
         j += 1
         if grp_key not in du:
             du.update({grp_key: {}})
-        if b != 0:
-            break
         for ost_key, ost_value in ost.items():
             if sum(list(du[grp_key].values())) == 3600:
                 break
-            if b != 0:
-                break
             for ost_state, ost_time in ost_value.items():
-                if b != 0:
+                if sum(list(du[grp_key].values())) > 3600:
+                    ost[ost_key].update({ost_state: ost_time + sum(list(du[grp_key].values())) - 3600})
+                    du[grp_key].update({ost_state: 3600 - (sum(list(du[grp_key].values())) - 3600)})
                     break
+                #if sum(list(du[grp_key].values())) > 3600:
+                    #pdb.set_trace()
                 if ost_state in du[grp_key]:
                     if ost_time <= 3600 - sum(list(du[grp_key].values())):
                         du[grp_key].update({ost_state: ost_time + du[grp_key][ost_state]})
@@ -82,8 +84,6 @@ def distribute_overflows(du):
                         i = j
                         try:
                             for kk in groups:
-                                if b != 0:
-                                    break
                                 if ost_time > 3600:
                                     ost_time -= 3600 - sum(list(du[grp_key].values()))
                                     du[grp_key].update({ost_state: du[grp_key][ost_state] + 3600 - sum(list(du[grp_key].values()))})
@@ -96,8 +96,6 @@ def distribute_overflows(du):
                         except KeyError:
                             try:
                                 for kkk in groups:
-                                    if b != 0:
-                                        break
                                     if ost_time > 3600:
                                         if grp_key not in du:
                                             du.update({grp_key: {}})
@@ -113,8 +111,7 @@ def distribute_overflows(du):
                                         du[grp_key].update({ost_state: ost_time})
                                         ost[ost_key].update({ost_state: 0})
                             except IndexError:
-                                b += 1
-                                break
+                                pass
                 else:
                     if ost_time <= 3600 - sum(list(du[grp_key].values())):
                         du[grp_key].update({ost_state: ost_time})
@@ -138,43 +135,50 @@ def distribute_overflows(du):
                                     du[grp_key].update({ost_state: ost_time})
                                     ost[ost_key].update({ost_state: 0})
                         except IndexError:
-                            b += 1
-                            break
+                            pass
 
     return du
 
 
 # Parsing
-data = {}
+'''print('Preparing...')
 try:
     with open(filename, 'r') as file:
-        for ln in file:
-            ln = ln.split(",")
-            ctime = parse_time(ln[1])
-            user_id = ln[4]
-            state = ln[2]
-            if user_id in users and fcdate <= ctime.date() <= lcdate:
-                state_range = None
-                if len(ln) > 6:
-                    state_range = parse_time(ln[6]) - parse_time(ln[5])
-                z = data.setdefault(user_id, {})
-                z = z.setdefault(group_time(ctime), {})
-                z.setdefault(state, 0)
-                if state_range:
-                    z[state] += state_range.seconds
+        pbp = sum(1 for line in file)
 except FileNotFoundError:
     print('Path Input Error, File Not Found')
     quit()
+print('Success!')
+pb = ProgressBar(total=pbp, prefix='Progress:', suffix='', decimals=1, length=50, fill='█', zfill='-')
+
+pbt = 0'''
+data = {}
+with open(filename, 'r') as file:
+    for ln in file:
+        ln = ln.split(",")
+        ctime = parse_time(ln[1])
+        user_id = ln[4]
+        state = ln[2]
+        if user_id in users and fcdate <= ctime.date() <= lcdate:
+            state_range = None
+            if len(ln) > 6:
+                state_range = parse_time(ln[6]) - parse_time(ln[5])
+            z = data.setdefault(user_id, {})
+            z = z.setdefault(group_time(ctime), {})
+            z.setdefault(state, 0)
+            if state_range:
+                z[state] += state_range.seconds
+        #pbt += 1
+        #pb.print_progress_bar(pbt)
+print('Done!')
 
 # Overflow
-#try:
-print('До:', data[fuserid])
-distribute_overflows(data[fuserid])
-#distribute_overflows(data[suserid])
-print('После:', data[fuserid])
-#except KeyError:
-    #print('Input Error, ID Or Date Not Found')
-    #quit()
+try:
+    distribute_overflows(data[fuserid])
+    #distribute_overflows(data[suserid])
+except KeyError:
+    print('Input Error, ID Or Date Incorrect')
+    quit()
 
 # Test bar chart
 xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
