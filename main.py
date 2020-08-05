@@ -3,8 +3,6 @@ from datetime import datetime, timedelta
 import numpy as np
 import matplotlib.pyplot as plt
 from console_progressbar import ProgressBar
-#from progress.bar import IncrementalBar
-#import pdb, time, sys
 
 # Input
 filename = str(input("Path:"))
@@ -15,7 +13,7 @@ try:
     fcdate = datetime.strptime(fdate, '%Y-%m-%d').date()
     lcdate = datetime.strptime(ldate, '%Y-%m-%d').date()
 except ValueError:
-    print('Date Input Error, Incorrect Date')
+    print('Date Input Error, Invalid Date Format')
     quit()
 
 fuserid = str(input('1 ID:'))
@@ -25,7 +23,9 @@ users = [fuserid, suserid]
 
 # Defs
 def parse_time(s):
+
     s = s.strip(' \n[)"') + "00"
+
     try:
         return datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f%z')
     except ValueError:
@@ -33,6 +33,7 @@ def parse_time(s):
 
 
 def group_time(dt):
+
     return dt.strftime('%Y-%m-%d %H')
 
 
@@ -67,81 +68,43 @@ def distribute_overflows(du):
         if grp_key not in du:
             du.update({grp_key: {}})
         for ost_key, ost_value in ost.items():
-            if sum(list(du[grp_key].values())) == 3600:
-                break
-            for ost_state, ost_time in ost_value.items():
-                if sum(list(du[grp_key].values())) > 3600:
-                    ost[ost_key].update({ost_state: ost_time + sum(list(du[grp_key].values())) - 3600})
-                    du[grp_key].update({ost_state: 3600 - (sum(list(du[grp_key].values())) - 3600)})
+            try:
+                if sum(list(du[grp_key].values())) == 3600:
                     break
-                #if sum(list(du[grp_key].values())) > 3600:
-                    #pdb.set_trace()
-                if ost_state in du[grp_key]:
-                    if ost_time <= 3600 - sum(list(du[grp_key].values())):
-                        du[grp_key].update({ost_state: ost_time + du[grp_key][ost_state]})
-                        ost[ost_key].update({ost_state: 0})
-                    else:
-                        i = j
-                        try:
-                            for kk in groups:
-                                if ost_time > 3600:
-                                    ost_time -= 3600 - sum(list(du[grp_key].values()))
-                                    du[grp_key].update({ost_state: du[grp_key][ost_state] + 3600 - sum(list(du[grp_key].values()))})
-                                    ost[ost_key].update({ost_state: ost_time})
-                                    grp_key = group_time(groups[j])
-                                    i += 1
-                                else:
-                                    du[grp_key].update({ost_state: ost_time})
-                                    ost[ost_key].update({ost_state: 0})
-                        except KeyError:
-                            try:
-                                for kkk in groups:
-                                    if ost_time > 3600:
-                                        if grp_key not in du:
-                                            du.update({grp_key: {}})
-                                        ost_time -= 3600 - sum(list(du[grp_key].values()))
-                                        du[grp_key].update({ost_state: 3600 - sum(list(du[grp_key].values()))})
-                                        ost[ost_key].update({ost_state: ost_time})
-                                        grp_key = group_time(groups[i])
-                                        i += 1
-                                    else:
-                                        grp_key = group_time(groups[i])
-                                        if grp_key not in du:
-                                            du.update({grp_key: {}})
-                                        du[grp_key].update({ost_state: ost_time})
-                                        ost[ost_key].update({ost_state: 0})
-                            except IndexError:
-                                pass
-                else:
-                    if ost_time <= 3600 - sum(list(du[grp_key].values())):
-                        du[grp_key].update({ost_state: ost_time})
-                        ost[ost_key].update({ost_state: 0})
-                    else:
-                        i = j
-                        try:
-                            for kkkk in groups:
-                                if ost_time > 3600:
-                                    if grp_key not in du:
-                                        du.update({grp_key: {}})
-                                    ost_time -= 3600 - sum(list(du[grp_key].values()))
-                                    du[grp_key].update({ost_state: 3600 - sum(list(du[grp_key].values()))})
-                                    ost[ost_key].update({ost_state: ost_time})
-                                    grp_key = group_time(groups[i])
-                                    i += 1
-                                else:
-                                    grp_key = group_time(groups[i])
-                                    if grp_key not in du:
-                                        du.update({grp_key: {}})
-                                    du[grp_key].update({ost_state: ost_time})
-                                    ost[ost_key].update({ost_state: 0})
-                        except IndexError:
-                            pass
+                for ost_state, ost_time in ost_value.items():
+                    try:
+                        if sum(list(du[grp_key].values())) > 3600:
+                            ost[ost_key].update({ost_state: ost_time + sum(list(du[grp_key].values())) - 3600})
+                            du[grp_key].update({ost_state: 3600 - (sum(list(du[grp_key].values())) - 3600)})
+                            break
+                        if ost_state in du[grp_key]:
+                            if ost_time <= 3600 - sum(list(du[grp_key].values())):
+                                du[grp_key].update({ost_state: ost_time + du[grp_key][ost_state]})
+                                ost[ost_key].update({ost_state: 0})
+                            else:
+                                ost_time -= 3600 - sum(list(du[grp_key].values()))
+                                du[grp_key].update({ost_state: du[grp_key][ost_state] + 3600 - sum(list(du[grp_key].values()))})
+                                ost[ost_key].update({ost_state: ost_time})
+                                grp_key = group_time(groups[j])
+                        else:
+                            if ost_time <= 3600 - sum(list(du[grp_key].values())):
+                                du[grp_key].update({ost_state: ost_time})
+                                ost[ost_key].update({ost_state: 0})
+                            else:
+                                ost_time -= 3600 - sum(list(du[grp_key].values()))
+                                du[grp_key].update({ost_state: 3600 - sum(list(du[grp_key].values()))})
+                                ost[ost_key].update({ost_state: ost_time})
+                                grp_key = group_time(groups[j])
+                    except IndexError:
+                        break
+            except KeyError:
+                break
 
     return du
 
 
 # Parsing
-'''print('Preparing...')
+print('Preparing...')
 try:
     with open(filename, 'r') as file:
         pbp = sum(1 for line in file)
@@ -151,7 +114,7 @@ except FileNotFoundError:
 print('Success!')
 pb = ProgressBar(total=pbp, prefix='Progress:', suffix='', decimals=1, length=50, fill='█', zfill='-')
 
-pbt = 0'''
+pbt = 0
 data = {}
 with open(filename, 'r') as file:
     for ln in file:
@@ -168,17 +131,18 @@ with open(filename, 'r') as file:
             z.setdefault(state, 0)
             if state_range:
                 z[state] += state_range.seconds
-        #pbt += 1
-        #pb.print_progress_bar(pbt)
+        pbt += 1
+        pb.print_progress_bar(pbt)
 print('Done!')
 
 # Overflow
-try:
+distribute_overflows(data[fuserid])
+'''try:
     distribute_overflows(data[fuserid])
     #distribute_overflows(data[suserid])
 except KeyError:
     print('Input Error, ID Or Date Incorrect')
-    quit()
+    quit()'''
 
 # Test bar chart
 xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
