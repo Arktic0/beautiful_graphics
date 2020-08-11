@@ -37,68 +37,48 @@ def group_time(dt):
     return dt.strftime('%Y-%m-%d %H')
 
 
+def get_key(d, value):
+    for k, v in d.items():
+        if v == value:
+            return k
+
+
 def distribute_overflows(du):
 
     ost = {}
-
-    for key, value in du.items():
-        lneed = []
-        for smt, need in value.items():
-            if need < 3600:
-                lneed.append(need)
-            if sum(lneed) > 3600:
-                lneed.sort()
-                du[key].update({smt: need + 3600 - sum(lneed)})
-                ost[key] = {smt: sum(lneed) - 3600}
-            if need > 3600:
-                if len(lneed) != 0:
-                    ost[key] = {smt: need - (3600 - sum(lneed))}
-                    du[key].update({smt: 3600 - sum(lneed)})
-                else:
-                    ost[key] = {smt: need - 3600}
-                    du[key].update({smt: 3600})
-
-    rkey = datetime.strptime(key, '%Y-%m-%d %H')
-    groups = np.arange(rkey, lcdate, timedelta(hours=1)).astype(datetime)
     j = 0
+    groups = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
 
     for k in groups:
         grp_key = group_time(groups[j])
         j += 1
-        if grp_key not in du:
-            du.update({grp_key: {}})
-        for ost_key, ost_value in ost.items():
-            try:
-                if sum(list(du[grp_key].values())) == 3600:
-                    break
-                for ost_state, ost_time in ost_value.items():
-                    try:
-                        if sum(list(du[grp_key].values())) > 3600:
-                            ost[ost_key].update({ost_state: ost_time + sum(list(du[grp_key].values())) - 3600})
-                            du[grp_key].update({ost_state: 3600 - (sum(list(du[grp_key].values())) - 3600)})
-                            break
-                        if ost_state in du[grp_key]:
-                            if ost_time <= 3600 - sum(list(du[grp_key].values())):
-                                du[grp_key].update({ost_state: ost_time + du[grp_key][ost_state]})
-                                ost[ost_key].update({ost_state: 0})
-                            else:
-                                ost_time -= 3600 - sum(list(du[grp_key].values()))
-                                du[grp_key].update({ost_state: du[grp_key][ost_state] + 3600 - sum(list(du[grp_key].values()))})
-                                ost[ost_key].update({ost_state: ost_time})
-                                grp_key = group_time(groups[j])
+        for key, value in du.items():
+            if grp_key == key:
+                for du_state, du_time in value.items():
+                    if du_time > 3600:
+                        if du_state in ost:
+                            ost.update({du_state: ost[du_state] + du_time - 3600})
                         else:
-                            if ost_time <= 3600 - sum(list(du[grp_key].values())):
-                                du[grp_key].update({ost_state: ost_time})
-                                ost[ost_key].update({ost_state: 0})
-                            else:
-                                ost_time -= 3600 - sum(list(du[grp_key].values()))
-                                du[grp_key].update({ost_state: 3600 - sum(list(du[grp_key].values()))})
-                                ost[ost_key].update({ost_state: ost_time})
-                                grp_key = group_time(groups[j])
-                    except IndexError:
-                        break
-            except KeyError:
-                break
+                            ost.update({du_state: du_time - 3600})
+                        du[grp_key].update({du_state: 3600})
+                    if sum(list(du[grp_key].values())) < 3600:
+                        if sum(list(ost.values())) != 0:
+                            try:
+                                ost.update({du_state: ost[du_state] - 3600 + sum(list(du[grp_key].values()))})
+                                du[grp_key].update({du_state: du_time + 3600 - sum(list(du[grp_key].values()))})
+                            except KeyError:
+                                for ost_state, ost_time in ost.items():
+                                    if ost_time != 0:
+                                        break
+                                ost.update({ost_state: ost_time - 3600 + sum(list(du[grp_key].values()))})
+                                du[grp_key].update({du_state: 3600 - sum(list(du[grp_key].values()))})
+                    if sum(list(du[grp_key].values())) > 3600:
+                        key_max_value = get_key(du[grp_key], max(du[grp_key].values()))
+                        if du_state in ost:
+                            ost.update({key_max_value: ost[du_state] + sum(list(du[grp_key].values())) - 3600})
+                        else:
+                            ost.update({key_max_value: sum(list(du[grp_key].values())) - 3600})
+                        du[grp_key].update({key_max_value: max(du[grp_key].values()) + 3600 - sum(list(du[grp_key].values()))})
 
     return du
 
@@ -136,13 +116,12 @@ with open(filename, 'r') as file:
 print('Done!')
 
 # Overflow
-distribute_overflows(data[fuserid])
-'''try:
+try:
     distribute_overflows(data[fuserid])
-    #distribute_overflows(data[suserid])
+    distribute_overflows(data[suserid])
 except KeyError:
     print('Input Error, ID Or Date Incorrect')
-    quit()'''
+    quit()
 
 # Test bar chart
 xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
@@ -173,12 +152,12 @@ plt.legend(legend_bars, map(lambda x: x[1], bars))
 # Multiple bar charts
 '''fig, (ax1, ax2) = plt.subplots(2)
 
-ax1.bar(xticks, values, 0.35)
+ax1.bar(xticks, legend_bars, 0.35)
 ax1.set_yticks(np.arange(0, 61, 10))
 ax1.set_title('fuser')
 ax1.set_ylabel('Минуты')
 
-ax2.bar(xticks, values, 0.35)
+ax2.bar(xticks, legend_bars, 0.35)
 ax2.set_yticks(np.arange(0, 61, 10))
 ax2.set_title('fuser2')
 ax2.set_ylabel('Минуты')
