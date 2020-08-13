@@ -92,7 +92,6 @@ except FileNotFoundError:
     print('Path Input Error, File Not Found')
     quit()
 print('Success!')
-pb = ProgressBar(total=pbp, prefix='Progress:', suffix='', decimals=1, length=50, fill='█', zfill='-')
 
 pbt = 0
 data = {}
@@ -112,6 +111,7 @@ with open(filename, 'r') as file:
             if state_range:
                 z[state] += state_range.seconds
         pbt += 1
+        pb = ProgressBar(total=pbp, prefix='Progress:', suffix={pbt: pbp}, decimals=1, length=50, fill='█', zfill='-')
         pb.print_progress_bar(pbt)
 print('Done!')
 
@@ -123,46 +123,93 @@ except KeyError:
     print('Input Error, ID Or Date Incorrect')
     quit()
 
-# Test bar chart
-xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
-subsampled_xticks = map(lambda t: t.strftime("%m-%d"), xticks[0::24])
-xvals = np.arange(len(xticks))
-plt.xticks(xvals[0::24], subsampled_xticks)
-plt.yticks(np.arange(0, 70, 10))
-
 # Legend
-bars = [('Busy', 'Занят'), ('Ready', 'Готов'), ('Rest', 'Отдых'),
-        ('LoggedOut', 'Вышел'), ('Dinner', 'Обед'),
-        ('ServiceBreak', 'Тех. перерыв'), ('NA', '-')]
+xticks = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
 
-legend_bars = []
-prev_values = 0
+fuser_busy_values = [
+    data[fuserid].get(group_time(time), {}).get('Busy', 0) / 60
+    for time in xticks
+]
+fuser_ready_values = [
+    data[fuserid].get(group_time(time), {}).get('Ready', 0) / 60
+    for time in xticks
+]
+fuser_rest_values = [
+    data[fuserid].get(group_time(time), {}).get('Rest', 0) / 60
+    for time in xticks
+]
+fuser_loggedout_values = [
+    data[fuserid].get(group_time(time), {}).get('LoggedOut', 0) / 60
+    for time in xticks
+]
+fuser_na_values = [
+    data[fuserid].get(group_time(time), {}).get('NA', 0) / 60
+    for time in xticks
+]
+fuser_servicebreak_values = [
+    data[fuserid].get(group_time(time), {}).get('ServiceBreak', 0) / 60
+    for time in xticks
+]
+fuser_dinner_values = [
+    data[fuserid].get(group_time(time), {}).get('Dinner', 0) / 60
+    for time in xticks
+]
 
-for (state, label) in bars:
-    values = [
-        data[fuserid].get(group_time(time), {}).get(state, 0) / 60
-        for time in xticks
-    ]
-    bar = plt.bar(xvals, values, 0.8, bottom=prev_values)
-    legend_bars.append(bar[0])
-    prev_values += np.array(values)
-
-plt.legend(legend_bars, map(lambda x: x[1], bars))
+suser_busy_values = [
+    data[suserid].get(group_time(time), {}).get('Busy', 0) / 60
+    for time in xticks
+]
+suser_ready_values = [
+    data[suserid].get(group_time(time), {}).get('Ready', 0) / 60
+    for time in xticks
+]
+suser_rest_values = [
+    data[suserid].get(group_time(time), {}).get('Rest', 0) / 60
+    for time in xticks
+]
+suser_loggedout_values = [
+    data[suserid].get(group_time(time), {}).get('LoggedOut', 0) / 60
+    for time in xticks
+]
+suser_na_values = [
+    data[suserid].get(group_time(time), {}).get('NA', 0) / 60
+    for time in xticks
+]
+suser_servicebreak_values = [
+    data[suserid].get(group_time(time), {}).get('ServiceBreak', 0) / 60
+    for time in xticks
+]
+suser_dinner_values = [
+    data[suserid].get(group_time(time), {}).get('Dinner', 0) / 60
+    for time in xticks
+]
 
 # Multiple bar charts
-'''fig, (ax1, ax2) = plt.subplots(2)
+fig, (ax1, ax2) = plt.subplots(2)
 
-ax1.bar(xticks, legend_bars, 0.35)
+ax1.bar(xticks, fuser_busy_values, 0.03)
+ax1.bar(xticks, fuser_ready_values, 0.03, bottom=fuser_busy_values)
+ax1.bar(xticks, fuser_rest_values, 0.03, bottom=fuser_ready_values)
+ax1.bar(xticks, fuser_loggedout_values, 0.03, bottom=fuser_rest_values)
+ax1.bar(xticks, fuser_dinner_values, 0.03, bottom=fuser_loggedout_values)
+ax1.bar(xticks, fuser_servicebreak_values, 0.03, bottom=fuser_dinner_values)
+ax1.bar(xticks, fuser_na_values, 0.03, bottom=fuser_servicebreak_values)
 ax1.set_yticks(np.arange(0, 61, 10))
-ax1.set_title('fuser')
+ax1.set_title(fuserid)
 ax1.set_ylabel('Минуты')
 
-ax2.bar(xticks, legend_bars, 0.35)
+ax2.bar(xticks, suser_busy_values, 0.03)
+ax2.bar(xticks, suser_ready_values, 0.03, bottom=suser_busy_values)
+ax2.bar(xticks, suser_rest_values, 0.03, bottom=suser_ready_values)
+ax2.bar(xticks, suser_loggedout_values, 0.03, bottom=suser_rest_values)
+ax2.bar(xticks, suser_dinner_values, 0.03, bottom=suser_loggedout_values)
+ax2.bar(xticks, suser_servicebreak_values, 0.03, bottom=suser_dinner_values)
+ax2.bar(xticks, suser_na_values, 0.03, bottom=suser_servicebreak_values)
 ax2.set_yticks(np.arange(0, 61, 10))
-ax2.set_title('fuser2')
+ax2.set_title(suserid)
 ax2.set_ylabel('Минуты')
 
-fig.legend(legend_bars, map(lambda x: x[1], bars))'''
+fig.legend(['Занят', 'Готов', 'Отдых', 'Вышел', 'Обед', 'Тех. Перерыв', '-'])
 
 # Output
 plt.show()
