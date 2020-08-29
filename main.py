@@ -23,7 +23,6 @@ users = [fuserid, suserid]
 
 # Defs
 def parse_time(s):
-
     s = s.strip(' \n[)"') + "00"
 
     try:
@@ -33,7 +32,6 @@ def parse_time(s):
 
 
 def group_time(dt):
-
     return dt.strftime('%Y-%m-%d %H')
 
 
@@ -44,7 +42,6 @@ def get_key(d, value):
 
 
 def distribute_overflows(du):
-
     ost = {}
     j = 0
     groups = np.arange(fcdate, lcdate, timedelta(hours=1)).astype(datetime)
