@@ -21,7 +21,7 @@ suserid = str(input('2 ID:'))
 users = [fuserid, suserid]
 
 
-# Defs
+# Not Only Defs
 def parse_time(s):
     s = s.strip(' \n[)"') + "00"
 
