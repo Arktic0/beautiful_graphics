@@ -21,7 +21,7 @@ suserid = str(input('2 ID:'))
 users = [fuserid, suserid]
 
 
-# Not Only Defs
+#Defs
 def parse_time(s):
     s = s.strip(' \n[)"') + "00"
 
@@ -54,28 +54,57 @@ def distribute_overflows(du):
                 for du_state, du_time in value.items():
                     if du_time > 3600:
                         if du_state in ost:
-                            ost.update({du_state: ost[du_state] + du_time - 3600})
+                            ost.update({
+                                du_state: ost[du_state] + du_time - 3600
+                            })
                         else:
                             ost.update({du_state: du_time - 3600})
                         du[grp_key].update({du_state: 3600})
                     if sum(list(du[grp_key].values())) < 3600:
                         if sum(list(ost.values())) != 0:
                             try:
-                                ost.update({du_state: ost[du_state] - 3600 + sum(list(du[grp_key].values()))})
-                                du[grp_key].update({du_state: du_time + 3600 - sum(list(du[grp_key].values()))})
+                                ost.update({
+                                    du_state:
+                                    ost[du_state] - 3600 + sum(
+                                        list(du[grp_key].values()))
+                                })
+                                du[grp_key].update({
+                                    du_state:
+                                    du_time + 3600 - sum(
+                                        list(du[grp_key].values()))
+                                })
                             except KeyError:
                                 for ost_state, ost_time in ost.items():
                                     if ost_time != 0:
                                         break
-                                ost.update({ost_state: ost_time - 3600 + sum(list(du[grp_key].values()))})
-                                du[grp_key].update({du_state: 3600 - sum(list(du[grp_key].values()))})
+                                ost.update({
+                                    ost_state:
+                                    ost_time - 3600 + sum(
+                                        list(du[grp_key].values()))
+                                })
+                                du[grp_key].update({
+                                    du_state:
+                                    3600 - sum(list(du[grp_key].values()))
+                                })
                     if sum(list(du[grp_key].values())) > 3600:
-                        key_max_value = get_key(du[grp_key], max(du[grp_key].values()))
+                        key_max_value = get_key(du[grp_key],
+                                                max(du[grp_key].values()))
                         if du_state in ost:
-                            ost.update({key_max_value: ost[du_state] + sum(list(du[grp_key].values())) - 3600})
+                            ost.update({
+                                key_max_value:
+                                ost[du_state] + sum(
+                                    list(du[grp_key].values())) - 3600
+                            })
                         else:
-                            ost.update({key_max_value: sum(list(du[grp_key].values())) - 3600})
-                        du[grp_key].update({key_max_value: max(du[grp_key].values()) + 3600 - sum(list(du[grp_key].values()))})
+                            ost.update({
+                                key_max_value:
+                                sum(list(du[grp_key].values())) - 3600
+                            })
+                        du[grp_key].update({
+                            key_max_value:
+                            max(du[grp_key].values()) + 3600 - sum(
+                                list(du[grp_key].values()))
+                        })
 
     return du
 
@@ -108,7 +137,14 @@ with open(filename, 'r') as file:
             if state_range:
                 z[state] += state_range.seconds
         pbt += 1
-        pb = ProgressBar(total=pbp, prefix='Progress:', suffix={pbt: pbp}, decimals=1, length=50, fill='█', zfill='-')
+        pb = ProgressBar(
+            total=pbp,
+            prefix='Progress:',
+            suffix={pbt: pbp},
+            decimals=1,
+            length=50,
+            fill='█',
+            zfill='-')
         pb.print_progress_bar(pbt)
 print('Done!')
 
